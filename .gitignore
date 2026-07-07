@@ -1,0 +1,13 @@
+# Codex local scratch/output folders
+work/
+outputs/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment files
+.env
+.env.*
+!.env.example
