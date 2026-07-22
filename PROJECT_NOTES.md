@@ -2,27 +2,30 @@
 
 ## Current Goal
 
-Set up a GitHub/Gitee-based workflow so the same project can be continued from different computers.
+Keep cross-computer project context synchronized, currently including the HPDI low-temperature pump sound and hydraulic behavior analysis.
 
 ## Status
 
 - Git is installed locally.
 - GitHub is open in the browser.
 - GitHub CLI (`gh`) is not installed on this computer.
-- Command-line access to `https://github.com/zangxiaoxiao723/yammy723.git` timed out during initial testing.
+- Repository remote is `https://github.com/zangxiaoxiao723/yammy723.git`.
+- HPDI project handoff files are stored under `projects/hpdi-pump-noise-analysis-202607/`.
 
 ## Decisions
 
 - Use GitHub/Gitee plus project notes instead of relying on API chat history sync.
 - Keep AI-facing context in `AGENTS.md`.
 - Keep progress and decisions in this file.
+- For HPDI analysis, keep reports, plots, CSV outputs, scripts, and handoff notes in Git.
+- Do not commit raw HPDI videos/WAV by default because the files are large and may contain sensitive company test data.
 
 ## Next Steps
 
-1. Confirm the GitHub repository URL.
-2. Connect this local folder to the remote repository.
-3. Commit and push the initial project context files.
-4. On the second computer, clone the same repository and open it in Codex.
+1. Pull this repository on the second computer.
+2. Open `projects/hpdi-pump-noise-analysis-202607/README.md`.
+3. Open `projects/hpdi-pump-noise-analysis-202607/CODEX_HANDOFF.md` before asking Codex to continue.
+4. For new HPDI test data, rerun the same loudness method and compare P90/P95 against the baseline CSV.
 
 ## Sync Workflow
 
