@@ -278,7 +278,7 @@ calc.freezePanes.freezeRows(1);
 await wb.inspect({ kind: "table", range: "对比面板!A1:H11", include: "values,formulas", tableMaxRows: 12, tableMaxCols: 8 });
 
 const output = await SpreadsheetFile.exportXlsx(wb);
-await output.save(`${outputDir}/HPDI泵声音固定基准对比工具_复核修正版.xlsx`);
+await output.save(`${outputDir}/HPDI泵声音固定基准对比工具_内部复核_禁止外发.xlsx`);
 console.log("stage:export");
 
 // Artifact-tool's renderer currently crashes on this workbook's formula-driven charts.

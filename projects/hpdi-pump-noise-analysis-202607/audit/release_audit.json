@@ -1,0 +1,121 @@
+{
+  "status": "PASS",
+  "checks_passed": 17,
+  "checks_total": 17,
+  "checks": [
+    {
+      "name": "V2黄金文件哈希锁定:workbook_payload.json",
+      "passed": true,
+      "detail": "cee9e5420ac7e9464a9bb64b5a8f68dca8be83dbda0445e32e1ac7ffb572c3df"
+    },
+    {
+      "name": "V2黄金文件哈希锁定:event_details.csv",
+      "passed": true,
+      "detail": "82f2b1dc85d2b285d70a89a336a01f0bcf555a427a2d8469b56dac12e852dd06"
+    },
+    {
+      "name": "V2黄金文件哈希锁定:baseline_comparison.csv",
+      "passed": true,
+      "detail": "4d719edfed208204afe641d0357134af1d56db721fdfeea024e30148d8321e01"
+    },
+    {
+      "name": "V2黄金文件哈希锁定:test_registry.csv",
+      "passed": true,
+      "detail": "a427cf00eb9dff139da9fb217a12d4e01c3cfbb90878f934e329660524d9e88e"
+    },
+    {
+      "name": "V2基准登记值逐字段锁定",
+      "passed": true,
+      "detail": "10组基准全部一致"
+    },
+    {
+      "name": "V2基准包络逐点锁定",
+      "passed": true,
+      "detail": "10组逐点一致"
+    },
+    {
+      "name": "V2代表咚声曲线逐点锁定",
+      "passed": true,
+      "detail": "20列逐点一致"
+    },
+    {
+      "name": "20组指标由逐事件数据独立重算",
+      "passed": true,
+      "detail": "常见声、较响声和事件数全部一致"
+    },
+    {
+      "name": "V2同转速差值独立复算",
+      "passed": true,
+      "detail": "700/800/900/1125 rpm全部一致"
+    },
+    {
+      "name": "测试编号唯一",
+      "passed": true,
+      "detail": "rows=20, unique=20"
+    },
+    {
+      "name": "固定基准位于合并数据前10组",
+      "passed": true,
+      "detail": [
+        "FR_INIT_260709_600",
+        "DD_BASE_260707_700",
+        "FR_INIT_260709_700",
+        "DD_BASE_260707_800",
+        "FR_INIT_260709_800",
+        "DD_BASE_260707_900",
+        "FR_INIT_260709_900",
+        "FR_INIT_260709_1000",
+        "DD_BASE_260707_1125",
+        "FR_INIT_260709_1125"
+      ]
+    },
+    {
+      "name": "Excel含基准复核与主对比工作表",
+      "passed": true,
+      "detail": "检查工作表名称"
+    },
+    {
+      "name": "Excel未把背景归一化写成主声级",
+      "passed": true,
+      "detail": "禁用词扫描"
+    },
+    {
+      "name": "Excel包含基准锁定警示",
+      "passed": true,
+      "detail": "警示文本存在"
+    },
+    {
+      "name": "修正说明包含关键结论与边界",
+      "passed": true,
+      "detail": [
+        "高于东德7.6 dB",
+        "高于东德5.1 dB",
+        "不足以量化证明",
+        "永久锁定"
+      ]
+    },
+    {
+      "name": "修正说明无已撤销改善表述",
+      "passed": true,
+      "detail": [
+        "交付泵声音好一点有依据",
+        "重咚明显收敛",
+        "较响咚声优于东德"
+      ]
+    },
+    {
+      "name": "后续10段WAV完整存在",
+      "passed": true,
+      "detail": {
+        "count": 10,
+        "min_bytes": 1783758
+      }
+    }
+  ],
+  "file_hashes": {
+    "baseline_payload": "cee9e5420ac7e9464a9bb64b5a8f68dca8be83dbda0445e32e1ac7ffb572c3df",
+    "fixed_payload": "3f20444b45726f9a1f8f1c963611abfe51daeb06a171373ece95fe25aaeb58d6",
+    "workbook": "4414ae6d6011a9fae197e53f51c201361d5b25ff41cb4f896d4d5c7e7660f84b",
+    "correction_doc": "da27ebce87123ac64bdea731c87b860cda56818c06e80db3b314b4947787b62a"
+  }
+}

@@ -1,0 +1,17 @@
+﻿{
+    "status":  "PASS",
+    "workbook":  "C:\\Users\\admin\\Documents\\Codex\\2026-07-13\\yi-j\\outputs\\hpdi_followup_v3\\HPDI泵声音固定基准对比工具_内部复核_禁止外发.xlsx",
+    "sheets":  7,
+    "charts":  3,
+    "formula_errors":  [
+
+                       ],
+    "baseline_row_mismatches":  [
+
+                                ],
+    "validation_range":  "=测试索引!$A$2:$A$21",
+    "default_series_1":  "DD_BASE_260707_900",
+    "default_series_2":  "FR_INIT_260709_900",
+    "default_common_comparison":  "高于东德 7.6 dB",
+    "default_loud_comparison":  "高于东德 5.1 dB"
+}

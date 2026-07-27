@@ -8,7 +8,7 @@ import build_hpdi_customer_word_v2 as word
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "outputs" / "hpdi_followup_v3"
-DOCX = OUT / "HPDI后续声音分析口径复核与修正说明.docx"
+DOCX = OUT / "HPDI后续声音分析口径复核与修正说明_内部.docx"
 
 
 def table(doc, headers, rows, widths):

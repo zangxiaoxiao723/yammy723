@@ -19,8 +19,9 @@ SOURCE = Path(r"C:\FRCloud\FRQ\04_Pump Development\66_泵研发制造中心_临�
 BASE_OUT = ROOT / "outputs" / "hpdi_baseline_v2"
 OUT = ROOT / "outputs" / "hpdi_followup_v3"
 WAV_DIR = ROOT / "work" / "hpdi_followup_v3" / "wav"
-PLOTS = OUT / "plots"
-for path in (OUT, WAV_DIR, PLOTS):
+DIAGNOSTIC = OUT / "diagnostic_prominence"
+PLOTS = DIAGNOSTIC / "plots"
+for path in (OUT, WAV_DIR, DIAGNOSTIC, PLOTS):
     path.mkdir(parents=True, exist_ok=True)
 
 plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "DejaVu Sans"]
@@ -457,10 +458,10 @@ def main() -> None:
             "notes": "绝对dB(A)为工程估算；同转速相对差值优先。" + (f" {summary['subjective']}。" if summary["subjective"] else ""),
         })
 
-    write_csv(OUT / "followup_summary.csv", summaries)
+    write_csv(DIAGNOSTIC / "diagnostic_prominence_summary.csv", summaries)
     write_csv(OUT / "followup_event_details.csv", events)
-    write_csv(OUT / "followup_comparison.csv", comparisons)
-    write_csv(OUT / "followup_registry.csv", new_registry)
+    write_csv(DIAGNOSTIC / "diagnostic_prominence_comparison.csv", comparisons)
+    write_csv(DIAGNOSTIC / "diagnostic_prominence_registry.csv", new_registry)
 
     combined_registry = []
     for r in baseline_registry:
@@ -501,7 +502,7 @@ def main() -> None:
         "calibration": calibration,
         "comparisons": comparisons,
     }
-    with (OUT / "combined_workbook_payload.json").open("w", encoding="utf-8") as f:
+    with (DIAGNOSTIC / "diagnostic_prominence_workbook_payload.json").open("w", encoding="utf-8") as f:
         json.dump(combined_payload, f, ensure_ascii=False)
 
     # Primary comparison payload: keep the V2 baseline and calibration method immutable.
