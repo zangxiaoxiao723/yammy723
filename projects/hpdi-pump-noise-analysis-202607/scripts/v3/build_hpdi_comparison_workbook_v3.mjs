@@ -2,7 +2,8 @@ import fs from "node:fs/promises";
 import { SpreadsheetFile, Workbook } from "@oai/artifact-tool";
 
 const root = "C:/Users/admin/Documents/Codex/2026-07-13/yi-j";
-const payload = JSON.parse(await fs.readFile(`${root}/outputs/hpdi_followup_v3/combined_workbook_payload.json`, "utf8"));
+const payload = JSON.parse(await fs.readFile(`${root}/outputs/hpdi_followup_v3/combined_fixed_baseline_payload.json`, "utf8"));
+const baselinePayload = JSON.parse(await fs.readFile(`${root}/outputs/hpdi_baseline_v2/workbook_payload.json`, "utf8"));
 const outputDir = `${root}/outputs/hpdi_followup_v3`;
 const previewDir = `${root}/work/hpdi_excel_v2/previews`;
 await fs.mkdir(outputDir, { recursive: true });
@@ -10,6 +11,7 @@ await fs.mkdir(previewDir, { recursive: true });
 
 const wb = Workbook.create();
 const guide = wb.worksheets.add("使用说明");
+const baselineReview = wb.worksheets.add("既定基准结果");
 const dashboard = wb.worksheets.add("对比面板");
 const registry = wb.worksheets.add("测试索引");
 const envelope = wb.worksheets.add("包络曲线数据");
@@ -64,21 +66,21 @@ function excelCol(index) {
   return result;
 }
 
-for (const sheet of [guide, dashboard, registry, envelope, reps, calc]) {
+for (const sheet of [guide, baselineReview, dashboard, registry, envelope, reps, calc]) {
   sheet.showGridLines = false;
 }
 
 // Usage guide.
-title(guide, "A1:H1", "HPDI 泵声音对比工具");
+title(guide, "A1:H1", "HPDI 泵声音固定基准对比工具");
 console.log("stage:guide-title");
 guide.getRange("A3:H3").merge();
-guide.getRange("A3").values = [["用途：选择任意测试组，自动生成整体包络、常见咚声和较响咚声对比曲线。"]];
+guide.getRange("A3").values = [["用途：东德和富瑞初始基准数值、算法及校准偏移全部保持V2不变；后续测试只按同一固定算法追加。"]];
 guide.getRange("A3").format = { font: { bold: true, color: C.teal, size: 12 }, wrapText: true };
 console.log("stage:guide-intro");
 guide.getRange("A5:B10").values = [
   ["操作", "说明"],
-  ["1. 选择测试", "在“对比面板”顶部的下拉框中选择最多 6 组测试，空槽位不会显示。"],
-  ["2. 看整体包络", "判断一段测试中连续多个周期何时偏响、何时偏小。纵轴为背景归一化声级(dB)，横轴为视频时间。"],
+  ["1. 复核旧基准", "先看“既定基准结果”。东德与富瑞初始的结果完全沿用V2，不受后续算法调整影响。"],
+  ["2. 选择测试", "在“对比面板”顶部选择最多6组。选择东德900和富瑞初始900时，结果必须与V2一致。"],
   ["3. 看常见咚声", "表示大多数正常周期的典型冲击，不要求客户理解统计术语。"],
   ["4. 看较响咚声", "表示一段测试中偏响的那部分周期，是调泵时优先压低的对象。"],
   ["5. 追加新测试", "由分析脚本把新测试追加到“测试索引”和两个曲线数据页，原有东德基准保持不变。"],
@@ -90,7 +92,7 @@ guide.getRange("A6:B10").format = { wrapText: true, verticalAlignment: "center" 
 guide.getRange("A5:B10").format.borders = { preset: "all", style: "thin", color: C.line };
 console.log("stage:guide-table-format");
 guide.getRange("A12:H14").merge();
-guide.getRange("A12").values = [["重要：为降低跨日期手机自动增益影响，每段录音的局部背景统一到65 dB参考线。图中数值为背景归一化声级，不是认证绝对dB(A)。正式结论优先比较同转速，并保持同一手机、录制模式、角度和距离。"]];
+guide.getRange("A12").values = [["重要：本工具不再对既定基准做逐段背景平移。无分贝仪的跨日期视频虽然按相同固定算法计算，但可能受手机自动增益影响，后续结果属于工程估算；出现明显改善或恶化时必须用同步分贝仪复测确认。"]];
 guide.getRange("A12").format = { fill: C.paleGold, font: { color: C.ink }, wrapText: true, verticalAlignment: "center" };
 console.log("stage:guide-note");
 guide.getRange("A1:A15").format.columnWidth = 18;
@@ -99,8 +101,32 @@ guide.getRange("C1:H15").format.columnWidth = 11;
 guide.getRange("A5:B10").format.rowHeight = 34;
 console.log("stage:guide");
 
+// The original V2 baseline is immutable. This sheet is the authoritative old-result reference.
+title(baselineReview, "A1:K1", "既定基准结果（V2原口径，不随后续算法变化）");
+baselineReview.getRange("A3:K3").merge();
+baselineReview.getRange("A3").values = [["固定偏移来自富瑞初始1000 rpm视频中的分贝仪画面。以下结果与上一版工具完全一致；其中900 rpm富瑞初始常见咚声高于东德7.6 dB，较响咚声高于东德5.1 dB。"]];
+baselineReview.getRange("A3").format = { fill: C.paleGold, font: { bold: true, color: C.ink }, wrapText: true, verticalAlignment: "center" };
+const baselineHeaders = ["测试编号", "日期", "产品", "转速 rpm", "常见咚声 估算dB(A)", "较响咚声 估算dB(A)", "常见声相对东德", "较响声相对东德", "常见差值 dB", "较响差值 dB", "结论"];
+const baselineRows = baselinePayload.registry.map((r) => [
+  r.series_id, r.test_date, r.product, r.speed_rpm, r.common_thump_est_dba, r.loud_thump_est_dba,
+  r.common_comparison, r.loud_comparison, r.common_difference_db, r.loud_difference_db, r.result,
+]);
+baselineReview.getRangeByIndexes(4, 0, 1, baselineHeaders.length).values = [baselineHeaders];
+baselineReview.getRangeByIndexes(5, 0, baselineRows.length, baselineHeaders.length).values = baselineRows;
+sectionHeader(baselineReview.getRange("A5:K5"));
+baselineReview.getRange(`A5:K${baselineRows.length + 5}`).format.borders = { preset: "inside", style: "thin", color: C.line };
+baselineReview.getRange(`D6:D${baselineRows.length + 5}`).format.numberFormat = "0";
+baselineReview.getRange(`E6:F${baselineRows.length + 5}`).format.numberFormat = "0.0";
+baselineReview.getRange(`I6:J${baselineRows.length + 5}`).format.numberFormat = "0.0";
+baselineReview.getRange(`A1:A${baselineRows.length + 5}`).format.columnWidth = 25;
+baselineReview.getRange(`B1:D${baselineRows.length + 5}`).format.columnWidth = 14;
+baselineReview.getRange(`E1:J${baselineRows.length + 5}`).format.columnWidth = 20;
+baselineReview.getRange(`K1:K${baselineRows.length + 5}`).format.columnWidth = 20;
+baselineReview.freezePanes.freezeRows(5);
+console.log("stage:baseline-review");
+
 // Registry data.
-const registryHeaders = ["测试编号", "测试日期", "产品", "状态/配置", "简称", "转速 rpm", "分组", "时长 s", "咚声数", "常见咚声 背景归一化dB", "较响咚声 背景归一化dB", "常见声相对东德", "较响声相对东德", "常见差值大小 dB", "较响差值大小 dB", "常见声相对富瑞初始", "较响声相对富瑞初始", "常见差值/初始 dB", "较响差值/初始 dB", "超过东德较响门槛 %", "结论", "有分贝仪", "主观备注", "备注"];
+const registryHeaders = ["测试编号", "测试日期", "产品", "状态/配置", "简称", "转速 rpm", "分组", "时长 s", "咚声数", "常见咚声 估算dB(A)", "较响咚声 估算dB(A)", "常见声相对东德", "较响声相对东德", "常见差值大小 dB", "较响差值大小 dB", "常见声相对富瑞初始", "较响声相对富瑞初始", "常见差值/初始 dB", "较响差值/初始 dB", "超过东德较响门槛 %", "声级判断", "有分贝仪", "主观备注", "备注"];
 const registryRows = payload.registry.map((r) => [
   r.series_id, r.test_date, r.product, r.configuration, r.short_label || r.product, r.speed_rpm, r.run || `${r.speed_rpm}rpm`, r.duration_s, r.event_count,
   r.common_thump_est_dba, r.loud_thump_est_dba, r.common_comparison, r.loud_comparison,
@@ -162,13 +188,13 @@ reps.freezePanes.freezeRows(1);
 console.log("stage:raw-data");
 
 // Dashboard controls and metric summary.
-title(dashboard, "A1:N1", "HPDI 泵声音可选测试对比");
+title(dashboard, "A1:N1", "固定基准口径：HPDI泵声音对比");
 dashboard.getRange("A3").values = [["选择测试"]];
 dashboard.getRange("A3").format = { font: { bold: true, color: C.ink }, fill: C.paleBlue };
-dashboard.getRange("B3:G3").values = [[seriesIds.find((x) => x.includes("DD_BASE") && x.endsWith("_700")), seriesIds.find((x) => x.includes("FR_INIT") && x.endsWith("_700")), seriesIds.find((x) => x === "FR_DELIVERY_0723_700"), "", "", ""]];
+dashboard.getRange("B3:G3").values = [[seriesIds.find((x) => x.includes("DD_BASE") && x.endsWith("_900")), seriesIds.find((x) => x.includes("FR_INIT") && x.endsWith("_900")), "", "", "", ""]];
 dashboard.getRange("B3:G3").format = { fill: "#FFF7ED", font: { bold: true, color: C.orange }, borders: { preset: "all", style: "thin", color: C.line }, horizontalAlignment: "center" };
 dashboard.getRange("B3:G3").dataValidation = { rule: { type: "list", formula1: `'测试索引'!$A$2:$A$${registryRows.length + 1}` } };
-dashboard.getRange("A5:J5").values = [["测试编号", "转速 rpm", "常见咚声", "较响咚声", "常见声/东德", "较响声/东德", "常见声/初始", "较响声/初始", "超门槛占比", "结论"]];
+dashboard.getRange("A5:J5").values = [["测试编号", "转速 rpm", "常见咚声", "较响咚声", "常见/东德", "较响/东德", "常见/初始", "较响/初始", "超门槛占比", "声级判断"]];
 sectionHeader(dashboard.getRange("A5:J5"));
 for (let i = 0; i < 6; i++) {
   const row = 6 + i;
@@ -219,29 +245,29 @@ for (const [startCol, suffix] of [[8, "常见"], [16, "较响"]]) {
 
 // Native charts remain editable in Excel and update with the dropdown choices.
 const chartEnvelope = dashboard.charts.add("line", calc.getRange(`A1:G${envRows}`));
-chartEnvelope.title = "整体咚声包络对比 - 背景归一化声级(dB)";
+chartEnvelope.title = "整体咚声包络对比 - V2固定基准口径";
 chartEnvelope.hasLegend = true;
 chartEnvelope.xAxis = { axisType: "textAxis", title: { text: "视频时间 (s)" }, textStyle: { fontSize: 9 } };
-chartEnvelope.yAxis = { title: { text: "背景归一化声级(dB)" }, numberFormatCode: "0", min: 50, max: 100 };
+chartEnvelope.yAxis = { title: { text: "泵咚声估算dB(A)" }, numberFormatCode: "0", min: 50, max: 110 };
 chartEnvelope.setPosition("A14", "N34");
 
 const chartCommon = dashboard.charts.add("line", calc.getRange(`I1:O${repRows}`));
 chartCommon.title = "常见咚声 - 单次曲线";
 chartCommon.hasLegend = true;
 chartCommon.xAxis = { axisType: "textAxis", title: { text: "相对峰值时间 (ms)" }, textStyle: { fontSize: 9 } };
-chartCommon.yAxis = { title: { text: "背景归一化声级(dB)" }, numberFormatCode: "0", min: 55, max: 95 };
+chartCommon.yAxis = { title: { text: "估算dB(A)" }, numberFormatCode: "0", min: 55, max: 110 };
 chartCommon.setPosition("A36", "G55");
 
 const chartLoud = dashboard.charts.add("line", calc.getRange(`Q1:W${repRows}`));
 chartLoud.title = "较响咚声 - 单次曲线";
 chartLoud.hasLegend = true;
 chartLoud.xAxis = { axisType: "textAxis", title: { text: "相对峰值时间 (ms)" }, textStyle: { fontSize: 9 } };
-chartLoud.yAxis = { title: { text: "背景归一化声级(dB)" }, numberFormatCode: "0", min: 55, max: 95 };
+chartLoud.yAxis = { title: { text: "估算dB(A)" }, numberFormatCode: "0", min: 55, max: 110 };
 chartLoud.setPosition("H36", "N55");
 console.log("stage:charts");
 
 dashboard.getRange("A57:N59").merge();
-dashboard.getRange("A57").values = [["判读方法：“低于东德/初始”表示该测试更安静。客户沟通重点看“较响咚声”和超过东德较响门槛的比例；不同转速只观察趋势，不直接判定优劣。"]];
+dashboard.getRange("A57").values = [["基准锁定：东德和富瑞初始沿用V2原值，禁止重新归一化。后续无分贝仪视频按同一算法追加，但受手机自动增益影响，跨日期差值必须经同步分贝仪复测后才能作为对外结论。"]];
 dashboard.getRange("A57").format = { fill: C.paleGold, wrapText: true, verticalAlignment: "center", font: { color: C.ink } };
 
 // Lightweight formatting for helper sheet; keep it visible for audit and manual repair.
@@ -252,7 +278,7 @@ calc.freezePanes.freezeRows(1);
 await wb.inspect({ kind: "table", range: "对比面板!A1:H11", include: "values,formulas", tableMaxRows: 12, tableMaxCols: 8 });
 
 const output = await SpreadsheetFile.exportXlsx(wb);
-await output.save(`${outputDir}/HPDI泵声音可选测试对比工具_含0716-0723.xlsx`);
+await output.save(`${outputDir}/HPDI泵声音固定基准对比工具_复核修正版.xlsx`);
 console.log("stage:export");
 
 // Artifact-tool's renderer currently crashes on this workbook's formula-driven charts.

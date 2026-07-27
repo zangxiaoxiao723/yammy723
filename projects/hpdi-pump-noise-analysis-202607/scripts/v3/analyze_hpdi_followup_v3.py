@@ -69,6 +69,8 @@ def tests() -> list[Test]:
 
 def extract_audio(test: Test) -> Path:
     output = WAV_DIR / f"{test.series_id}.wav"
+    if output.exists() and output.stat().st_size > 44:
+        return output
     subprocess.run(
         ["ffmpeg", "-y", "-v", "error", "-i", str(test.video), "-vn", "-ac", "1", "-ar", "44100", str(output)],
         check=True,
@@ -167,10 +169,15 @@ def analyze(test: Test, offset_db: float) -> tuple[dict[str, object], list[dict[
         "clean_dba": clean_dba + gain_shift,
         "raw_dba": env_dbfs + offset_db + gain_shift,
         "background_dba": base.db20(bg) + offset_db + gain_shift,
+        "clean_dba_fixed": clean_dba,
+        "raw_dba_fixed": env_dbfs + offset_db,
+        "background_dba_fixed": base.db20(bg) + offset_db,
         "exhaust_mask": exhaust_mask,
         "event_t": np.array([e["time_s"] for e in events]),
         "event_level": peak_levels,
         "event_energy": energies,
+        "event_level_fixed": raw_peak_levels,
+        "event_energy_fixed": raw_energies,
     }
     return summary, events, arrays
 
@@ -270,12 +277,18 @@ def normalize_baseline_payload(payload: dict[str, object]) -> tuple[dict[str, ob
     return normalized, peak_p90
 
 
-def representative(arr: dict[str, np.ndarray], percentile: float, rel_time: np.ndarray) -> np.ndarray:
-    target = float(np.percentile(arr["event_energy"], percentile))
-    idx = int(np.argmin(np.abs(arr["event_energy"] - target)))
+def representative(
+    arr: dict[str, np.ndarray],
+    percentile: float,
+    rel_time: np.ndarray,
+    energy_key: str = "event_energy",
+    curve_key: str = "raw_dba",
+) -> np.ndarray:
+    target = float(np.percentile(arr[energy_key], percentile))
+    idx = int(np.argmin(np.abs(arr[energy_key] - target)))
     center = float(arr["event_t"][idx])
     keep = (arr["t"] >= center - 0.30) & (arr["t"] <= center + 0.45)
-    return np.interp(rel_time, arr["t"][keep] - center, arr["raw_dba"][keep])
+    return np.interp(rel_time, arr["t"][keep] - center, arr[curve_key][keep])
 
 
 def plot_trends(summaries: list[dict[str, object]], arrays: dict[str, dict[str, np.ndarray]]) -> None:
@@ -490,6 +503,124 @@ def main() -> None:
     }
     with (OUT / "combined_workbook_payload.json").open("w", encoding="utf-8") as f:
         json.dump(combined_payload, f, ensure_ascii=False)
+
+    # Primary comparison payload: keep the V2 baseline and calibration method immutable.
+    fixed_baseline_registry = copy.deepcopy(raw_baseline_payload["registry"])
+    fixed_baseline_by = {(str(r["product"]), int(r["speed_rpm"])): r for r in fixed_baseline_registry}
+    baseline_peak_p90_fixed = {}
+    with (BASE_OUT / "baseline_summary.csv").open(encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            baseline_peak_p90_fixed[(row["product"], int(row["speed_rpm"]))] = float(row["p90_est_dba"])
+
+    fixed_comparisons = []
+    fixed_new_registry = []
+    for summary in summaries:
+        speed = int(summary["speed_rpm"])
+        dd = fixed_baseline_by.get(("东德基准", speed))
+        initial = fixed_baseline_by.get(("富瑞初始", speed))
+        common = float(summary["raw_common_thump_est_dba"])
+        loud = float(summary["raw_loud_thump_est_dba"])
+        dd_common = common - float(dd["common_thump_est_dba"]) if dd else None
+        dd_loud = loud - float(dd["loud_thump_est_dba"]) if dd else None
+        init_common = common - float(initial["common_thump_est_dba"]) if initial else None
+        init_loud = loud - float(initial["loud_thump_est_dba"]) if initial else None
+        _, dd_cm, dd_ct = delta_parts(dd_common)
+        _, dd_lm, dd_lt = delta_parts(dd_loud)
+        _, in_cm, in_ct = delta_parts(init_common)
+        _, in_lm, in_lt = delta_parts(init_loud)
+        if dd:
+            threshold = baseline_peak_p90_fixed[("东德基准", speed)]
+            above_share = float(100 * np.mean(arrays[str(summary["series_id"])]["event_level_fixed"] > threshold))
+        else:
+            above_share = None
+        row = {
+            **summary,
+            "common_thump_est_dba": common,
+            "loud_thump_est_dba": loud,
+            "dd_common_delta_db": dd_common,
+            "dd_loud_delta_db": dd_loud,
+            "vs_dd_common": dd_ct,
+            "vs_dd_loud": dd_lt,
+            "initial_common_delta_db": init_common,
+            "initial_loud_delta_db": init_loud,
+            "vs_initial_common": in_ct,
+            "vs_initial_loud": in_lt,
+            "above_dd_loud_share_pct": above_share,
+            "result": result_text(dd_loud),
+            "comparison_method": "V2固定基准口径",
+        }
+        fixed_comparisons.append(row)
+        fixed_new_registry.append({
+            "series_id": summary["series_id"],
+            "test_date": summary["test_date"],
+            "product": summary["product"],
+            "configuration": summary["configuration"],
+            "short_label": summary["short_label"],
+            "speed_rpm": speed,
+            "run": summary["run"],
+            "duration_s": summary["duration_s"],
+            "event_count": summary["event_count"],
+            "common_thump_est_dba": common,
+            "loud_thump_est_dba": loud,
+            "common_comparison": dd_ct,
+            "loud_comparison": dd_lt,
+            "common_difference_db": dd_cm,
+            "loud_difference_db": dd_lm,
+            "initial_common_comparison": in_ct,
+            "initial_loud_comparison": in_lt,
+            "initial_common_difference_db": in_cm,
+            "initial_loud_difference_db": in_lm,
+            "above_dd_loud_share_pct": above_share,
+            "result": result_text(dd_loud),
+            "has_meter": summary["has_meter"],
+            "subjective": summary["subjective"],
+            "notes": "沿用V2固定基准算法；无分贝仪的跨日期视频受手机自动增益影响，结论需复测确认。",
+        })
+
+    fixed_registry = []
+    for row in fixed_baseline_registry:
+        fixed_registry.append({
+            **row,
+            "short_label": row["product"],
+            "run": f"{row['speed_rpm']}rpm",
+            "initial_common_comparison": "初始状态" if row["product"] == "富瑞初始" else "不适用",
+            "initial_loud_comparison": "初始状态" if row["product"] == "富瑞初始" else "不适用",
+            "initial_common_difference_db": 0.0 if row["product"] == "富瑞初始" else None,
+            "initial_loud_difference_db": 0.0 if row["product"] == "富瑞初始" else None,
+            "subjective": "",
+        })
+    fixed_registry.extend(fixed_new_registry)
+
+    fixed_env_cols = copy.deepcopy(raw_baseline_payload["envelope_columns"])
+    fixed_rep_cols = copy.deepcopy(raw_baseline_payload["representative_columns"])
+    for summary in summaries:
+        sid = str(summary["series_id"])
+        arr = arrays[sid]
+        held = signal.order_filter(arr["clean_dba_fixed"], np.ones(9), 8)
+        held = np.maximum(held, 50.0)
+        valid = ~arr["exhaust_mask"]
+        vals = np.interp(env_time, arr["t"][valid], held[valid], left=np.nan, right=np.nan)
+        fixed_env_cols[sid] = [float(v) if np.isfinite(v) else None for v in vals]
+        fixed_rep_cols[f"{sid}_常见"] = representative(
+            arr, 50, rel_time, energy_key="event_energy_fixed", curve_key="raw_dba_fixed"
+        ).tolist()
+        fixed_rep_cols[f"{sid}_较响"] = representative(
+            arr, 90, rel_time, energy_key="event_energy_fixed", curve_key="raw_dba_fixed"
+        ).tolist()
+
+    fixed_payload = {
+        "registry": fixed_registry,
+        "envelope_time_s": env_time.tolist(),
+        "envelope_columns": fixed_env_cols,
+        "representative_time_ms": (rel_time * 1000).tolist(),
+        "representative_columns": fixed_rep_cols,
+        "calibration": calibration,
+        "comparisons": fixed_comparisons,
+        "method": "V2固定基准口径",
+    }
+    with (OUT / "combined_fixed_baseline_payload.json").open("w", encoding="utf-8") as f:
+        json.dump(fixed_payload, f, ensure_ascii=False)
+    write_csv(OUT / "followup_fixed_baseline_comparison.csv", fixed_comparisons)
 
     plot_trends(summaries, arrays)
     plot_comparison(comparisons, "dd", "后续状态相对同转速东德基准", "02_后续状态相对东德.png")
