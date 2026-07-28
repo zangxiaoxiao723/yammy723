@@ -2,7 +2,7 @@
 
 ## Current Goal
 
-Keep cross-computer project context synchronized, currently including the HPDI low-temperature pump sound and hydraulic behavior analysis.
+Keep cross-computer project context synchronized, currently including the HPDI low-temperature pump sound analysis and the product-level mechanical verification restart.
 
 ## Status
 
@@ -11,6 +11,7 @@ Keep cross-computer project context synchronized, currently including the HPDI l
 - GitHub CLI (`gh`) is not installed on this computer.
 - Repository remote is `https://github.com/zangxiaoxiao723/yammy723.git`.
 - HPDI project handoff files are stored under `projects/hpdi-pump-noise-analysis-202607/`.
+- Product verification context is stored in `projects/hpdi-pump-noise-analysis-202607/PRODUCT_VERIFICATION_HANDOFF.md`.
 
 ## Decisions
 
@@ -26,6 +27,7 @@ Keep cross-computer project context synchronized, currently including the HPDI l
 2. Open `projects/hpdi-pump-noise-analysis-202607/README.md`.
 3. Open `projects/hpdi-pump-noise-analysis-202607/CODEX_HANDOFF.md` before asking Codex to continue.
 4. For new HPDI test data, rerun the same loudness method and compare P90/P95 against the baseline CSV.
+5. For product verification, continue with the motion/valve-state questions in `PRODUCT_VERIFICATION_HANDOFF.md` before resuming calculations.
 
 ## Sync Workflow
 
